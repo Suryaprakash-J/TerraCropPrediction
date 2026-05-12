@@ -1,0 +1,786 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraAI 🌱 – Smart Agriculture Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════════════════════════════════ -->
+<nav class="navbar" id="navbar">
+  <div class="nav-container">
+    <div class="nav-brand">
+      <span class="brand-icon">🌱</span>
+      <span class="brand-name">TerraAI</span>
+      <span class="brand-badge">Beta</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#weather-section">Weather</a></li>
+      <li><a href="#predict-section">Predict</a></li>
+      <li><a href="#ocr-section">OCR</a></li>
+      <li><a href="#results-section">Results</a></li>
+      <li><a href="#compat-section">Compatibility</a></li>
+      <li><a href="#yield-section">Yield Planner</a></li>
+      <li><a href="/dashboard" class="nav-cta">Dashboard</a></li>
+      {% if user %}
+      <li class="nav-user">
+        <span class="nav-user-name"><i class="fas fa-user-circle"></i> {{ user.name.split()[0] }}</span>
+        <a href="/logout" class="nav-logout" title="Logout"><i class="fas fa-right-from-bracket"></i></a>
+      </li>
+      {% endif %}
+    </ul>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <i class="fas fa-seedling"></i> AI-Powered Agriculture Intelligence
+    </div>
+    <h1 class="hero-title">
+      Grow Smarter with<br />
+      <span class="gradient-text">TerraAI</span>
+    </h1>
+    <p class="hero-subtitle">
+      Precision crop recommendations powered by ensemble machine learning.
+      Upload soil reports, detect weather automatically, and get AI-driven
+      insights — all in one platform.
+    </p>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <span class="stat-num">22+</span>
+        <span class="stat-label">Crop Types</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num">98%</span>
+        <span class="stat-label">Accuracy</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num">3</span>
+        <span class="stat-label">ML Models</span>
+      </div>
+    </div>
+    <div class="hero-actions">
+      <a href="#predict-section" class="btn-primary">
+        <i class="fas fa-brain"></i> Start Predicting
+      </a>
+      <a href="#ocr-section" class="btn-secondary">
+        <i class="fas fa-file-image"></i> Upload Soil Report
+      </a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-card-float">
+      <div class="float-card card-1">
+        <span class="fc-emoji">🌾</span>
+        <div>
+          <div class="fc-crop">Rice</div>
+          <div class="fc-conf">98.2% match</div>
+        </div>
+      </div>
+      <div class="float-card card-2">
+        <span class="fc-emoji">🌽</span>
+        <div>
+          <div class="fc-crop">Maize</div>
+          <div class="fc-conf">93.7% match</div>
+        </div>
+      </div>
+      <div class="float-card card-3">
+        <span class="fc-emoji">🌸</span>
+        <div>
+          <div class="fc-crop">Cotton</div>
+          <div class="fc-conf">89.1% match</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     WEATHER SECTION
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="section" id="weather-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon"><i class="fas fa-cloud-sun"></i></div>
+      <h2 class="section-title">Live Weather Intelligence</h2>
+      <p class="section-sub">Auto-detect your location or search any Indian city</p>
+    </div>
+
+    <div class="weather-controls">
+      <div class="city-search-wrap">
+        <i class="fas fa-search city-search-icon"></i>
+        <input
+          type="text"
+          id="cityInput"
+          class="city-input"
+          placeholder="Search city (e.g. Mumbai, Delhi…)"
+          autocomplete="off"
+        />
+        <div class="city-dropdown" id="cityDropdown"></div>
+      </div>
+      <button class="btn-weather" id="fetchWeatherBtn">
+        <i class="fas fa-cloud-download-alt"></i> Get Weather
+      </button>
+      <button class="btn-location" id="autoLocationBtn">
+        <i class="fas fa-location-crosshairs"></i> Auto Detect
+      </button>
+    </div>
+
+    <div class="weather-cards" id="weatherCards">
+      <div class="weather-card" id="wc-temp">
+        <div class="wc-icon"><i class="fas fa-thermometer-half"></i></div>
+        <div class="wc-label">Temperature</div>
+        <div class="wc-value" id="wv-temp">--</div>
+        <div class="wc-unit">°C</div>
+      </div>
+      <div class="weather-card" id="wc-hum">
+        <div class="wc-icon"><i class="fas fa-droplet"></i></div>
+        <div class="wc-label">Humidity</div>
+        <div class="wc-value" id="wv-hum">--</div>
+        <div class="wc-unit">%</div>
+      </div>
+      <div class="weather-card" id="wc-rain">
+        <div class="wc-icon"><i class="fas fa-cloud-rain"></i></div>
+        <div class="wc-label">Rainfall</div>
+        <div class="wc-value" id="wv-rain">--</div>
+        <div class="wc-unit">mm</div>
+      </div>
+      <div class="weather-card" id="wc-city">
+        <div class="wc-icon"><i class="fas fa-city"></i></div>
+        <div class="wc-label">Location</div>
+        <div class="wc-value wc-city-name" id="wv-city">--</div>
+        <div class="wc-unit" id="wv-desc">--</div>
+      </div>
+    </div>
+
+    <div class="weather-fill-bar" id="weatherFillBar" style="display:none;">
+      <i class="fas fa-check-circle"></i>
+      Weather data auto-filled into prediction form!
+      <button class="fill-dismiss" onclick="document.getElementById('weatherFillBar').style.display='none'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     PREDICTION FORM
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="section section-dark" id="predict-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon"><i class="fas fa-brain"></i></div>
+      <h2 class="section-title">Crop Prediction Engine</h2>
+      <p class="section-sub">Enter soil parameters to get AI-powered crop recommendations</p>
+    </div>
+
+    <div class="predict-layout">
+      <!-- Form -->
+      <div class="predict-form-card glass-card">
+        <div class="form-grid">
+          <!-- N -->
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-flask"></i> Nitrogen (N)
+              <span class="form-hint">kg/ha</span>
+            </label>
+            <input type="number" id="inp-N" class="form-input" placeholder="0 – 140" min="0" max="140" step="0.1" />
+            <div class="input-bar"></div>
+          </div>
+          <!-- P -->
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-atom"></i> Phosphorus (P)
+              <span class="form-hint">kg/ha</span>
+            </label>
+            <input type="number" id="inp-P" class="form-input" placeholder="5 – 145" min="0" max="145" step="0.1" />
+            <div class="input-bar"></div>
+          </div>
+          <!-- K -->
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-fire"></i> Potassium (K)
+              <span class="form-hint">kg/ha</span>
+            </label>
+            <input type="number" id="inp-K" class="form-input" placeholder="5 – 205" min="0" max="205" step="0.1" />
+            <div class="input-bar"></div>
+          </div>
+          <!-- Temperature -->
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-thermometer-half"></i> Temperature
+              <span class="form-hint">°C</span>
+            </label>
+            <input type="number" id="inp-temp" class="form-input" placeholder="8 – 44" min="0" max="60" step="0.1" />
+            <div class="input-bar"></div>
+          </div>
+          <!-- Humidity -->
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-droplet"></i> Humidity
+              <span class="form-hint">%</span>
+            </label>
+            <input type="number" id="inp-hum" class="form-input" placeholder="14 – 100" min="0" max="100" step="0.1" />
+            <div class="input-bar"></div>
+          </div>
+          <!-- pH -->
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-vial"></i> Soil pH
+              <span class="form-hint">3.5 – 9.5</span>
+            </label>
+            <input type="number" id="inp-ph" class="form-input" placeholder="3.5 – 9.5" min="0" max="14" step="0.01" />
+            <div class="input-bar"></div>
+          </div>
+          <!-- Rainfall -->
+          <div class="form-group form-group-full">
+            <label class="form-label">
+              <i class="fas fa-cloud-rain"></i> Rainfall
+              <span class="form-hint">mm</span>
+            </label>
+            <input type="number" id="inp-rain" class="form-input" placeholder="20 – 300" min="0" max="500" step="0.1" />
+            <div class="input-bar"></div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-predict" id="predictBtn">
+            <i class="fas fa-seedling"></i>
+            <span>Predict Best Crop</span>
+            <div class="btn-loader" id="predictLoader" style="display:none;"></div>
+          </button>
+          <button class="btn-clear" id="clearBtn">
+            <i class="fas fa-rotate-left"></i> Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick fill tips -->
+      <div class="predict-tips">
+        <div class="tip-card glass-card">
+          <h3><i class="fas fa-lightbulb"></i> Quick Tips</h3>
+          <ul>
+            <li>Use the <strong>Weather</strong> section above to auto-fill temperature, humidity &amp; rainfall.</li>
+            <li>Upload a <strong>soil report image</strong> in the OCR section to auto-fill N, P, K, pH.</li>
+            <li>All 7 fields are required for prediction.</li>
+          </ul>
+        </div>
+        <div class="tip-card glass-card sample-values">
+          <h3><i class="fas fa-database"></i> Sample Values</h3>
+          <div class="sample-grid">
+            <button class="sample-btn" data-values="90,42,43,20.9,82,6.5,202.9">🌾 Rice</button>
+            <button class="sample-btn" data-values="77,42,43,20.9,82,6.5,202.9">🌽 Maize</button>
+            <button class="sample-btn" data-values="117,46,19,23.9,79.9,6.9,80">🌸 Cotton</button>
+            <button class="sample-btn" data-values="100,82,50,27,80,5.8,105">🍌 Banana</button>
+            <button class="sample-btn" data-values="20,132,200,23.9,82,6.0,70">🍇 Grapes</button>
+            <button class="sample-btn" data-values="101,28,29,25,58,6.8,158">☕ Coffee</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     OCR SECTION
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="section" id="ocr-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon"><i class="fas fa-file-image"></i></div>
+      <h2 class="section-title">OCR Soil Report Scanner</h2>
+      <p class="section-sub">Upload a soil lab report image — AI extracts N, P, K, pH automatically</p>
+    </div>
+
+    <div class="ocr-layout">
+      <div class="ocr-upload-zone glass-card" id="ocrDropZone">
+        <input type="file" id="ocrFileInput" accept="image/*" style="display:none;" />
+        <div class="ocr-upload-content" id="ocrUploadContent">
+          <div class="ocr-upload-icon">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </div>
+          <h3>Drop soil report image here</h3>
+          <p>or click to browse</p>
+          <div class="ocr-formats">PNG · JPG · JPEG · BMP · TIFF</div>
+        </div>
+        <div class="ocr-preview" id="ocrPreview" style="display:none;">
+          <img id="ocrPreviewImg" src="" alt="Preview" />
+          <button class="ocr-remove-btn" id="ocrRemoveBtn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="ocr-panel glass-card">
+        <div class="ocr-panel-header">
+          <h3><i class="fas fa-magic"></i> Extracted Values</h3>
+          <div class="ocr-status" id="ocrStatus">Waiting for upload…</div>
+        </div>
+
+        <div class="ocr-extracted" id="ocrExtracted">
+          <div class="ext-row">
+            <span class="ext-label"><i class="fas fa-flask"></i> Nitrogen (N)</span>
+            <span class="ext-value" id="ext-N">—</span>
+          </div>
+          <div class="ext-row">
+            <span class="ext-label"><i class="fas fa-atom"></i> Phosphorus (P)</span>
+            <span class="ext-value" id="ext-P">—</span>
+          </div>
+          <div class="ext-row">
+            <span class="ext-label"><i class="fas fa-fire"></i> Potassium (K)</span>
+            <span class="ext-value" id="ext-K">—</span>
+          </div>
+          <div class="ext-row">
+            <span class="ext-label"><i class="fas fa-vial"></i> Soil pH</span>
+            <span class="ext-value" id="ext-ph">—</span>
+          </div>
+        </div>
+
+        <div class="ocr-raw" id="ocrRawWrap" style="display:none;">
+          <div class="ocr-raw-label">Raw OCR Text (preview)</div>
+          <pre class="ocr-raw-text" id="ocrRawText"></pre>
+        </div>
+
+        <div class="ocr-actions">
+          <button class="btn-ocr-scan" id="ocrScanBtn" disabled>
+            <i class="fas fa-scan"></i>
+            <span>Scan Report</span>
+            <div class="btn-loader" id="ocrLoader" style="display:none;"></div>
+          </button>
+          <button class="btn-ocr-fill" id="ocrFillBtn" disabled>
+            <i class="fas fa-fill-drip"></i> Auto Fill Form
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     RESULTS SECTION
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="section section-dark" id="results-section" style="display:none;">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon"><i class="fas fa-trophy"></i></div>
+      <h2 class="section-title">AI Crop Recommendations</h2>
+      <p class="section-sub">Top 5 crops ranked by confidence score</p>
+    </div>
+
+    <!-- Best crop banner -->
+    <div class="best-crop-banner" id="bestCropBanner">
+      <div class="bcb-left">
+        <div class="bcb-emoji" id="bcb-emoji">🌾</div>
+        <div class="bcb-info">
+          <div class="bcb-label">Best Recommended Crop</div>
+          <div class="bcb-crop" id="bcb-crop">—</div>
+        </div>
+      </div>
+      <div class="bcb-right">
+        <div class="bcb-conf-label">Confidence</div>
+        <div class="bcb-conf" id="bcb-conf">—%</div>
+      </div>
+    </div>
+
+    <!-- Gemini AI explanation -->
+    <div class="gemini-explain-card" id="geminiExplainCard" style="display:none;">
+      <div class="gemini-explain-header">
+        <span class="gemini-badge"><i class="fas fa-sparkles"></i> Gemini AI</span>
+        <span class="gemini-title">Why this crop?</span>
+      </div>
+      <p class="gemini-explain-text" id="geminiExplainText"></p>
+    </div>
+
+    <!-- Top 5 cards -->
+    <div class="results-grid" id="resultsGrid"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     REVERSE COMPATIBILITY SECTION
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="section" id="compat-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon"><i class="fas fa-arrows-rotate"></i></div>
+      <h2 class="section-title">Reverse Compatibility AI</h2>
+      <p class="section-sub">Check if your crop is compatible with your soil type — get AI improvement tips</p>
+    </div>
+
+    <div class="compat-layout">
+      <div class="compat-form glass-card">
+        <div class="compat-inputs">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-seedling"></i> Crop Name
+            </label>
+            <input
+              type="text"
+              id="compat-crop"
+              class="form-input"
+              placeholder="e.g. Rice, Sugarcane, Wheat…"
+              list="cropSuggestions"
+            />
+            <datalist id="cropSuggestions">
+              <option value="Rice" /><option value="Maize" /><option value="Wheat" />
+              <option value="Cotton" /><option value="Sugarcane" /><option value="Tomato" />
+              <option value="Potato" /><option value="Banana" /><option value="Mango" />
+              <option value="Coffee" /><option value="Grapes" /><option value="Chickpea" />
+              <option value="Lentil" /><option value="Jute" /><option value="Papaya" />
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-layer-group"></i> Soil Type
+            </label>
+            <input
+              type="text"
+              id="compat-soil"
+              class="form-input"
+              placeholder="e.g. Sandy, Clay, Loamy, Black…"
+              list="soilSuggestions"
+            />
+            <datalist id="soilSuggestions">
+              <option value="Sandy Soil" /><option value="Clay Soil" /><option value="Loamy Soil" />
+              <option value="Black Soil" /><option value="Red Soil" /><option value="Alluvial Soil" />
+              <option value="Laterite Soil" /><option value="Peaty Soil" /><option value="Chalky Soil" />
+            </datalist>
+          </div>
+        </div>
+        <button class="btn-compat" id="compatBtn">
+          <i class="fas fa-microscope"></i>
+          <span>Analyze Compatibility</span>
+          <div class="btn-loader" id="compatLoader" style="display:none;"></div>
+        </button>
+      </div>
+
+      <!-- Result panel -->
+      <div class="compat-result glass-card" id="compatResult" style="display:none;">
+        <div class="compat-score-ring">
+          <svg viewBox="0 0 120 120" class="score-svg">
+            <circle cx="60" cy="60" r="50" class="score-bg" />
+            <circle cx="60" cy="60" r="50" class="score-fill" id="scoreFill" />
+          </svg>
+          <div class="score-center">
+            <div class="score-num" id="scoreNum">0</div>
+            <div class="score-pct">%</div>
+          </div>
+        </div>
+        <div class="compat-details">
+          <div class="compat-label-badge" id="compatLabel">—</div>
+          <div class="compat-pair">
+            <span id="compat-result-crop">—</span>
+            <i class="fas fa-arrows-left-right"></i>
+            <span id="compat-result-soil">—</span>
+          </div>
+          <div class="compat-tips" id="compatTips"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AI Soil Improvement Insight ── -->
+    <div class="soil-improve-panel" id="soilImprovePanel" style="display:none;">
+      <!-- Header -->
+      <div class="sip-header">
+        <div class="sip-title-row">
+          <div class="sip-icon"><i class="fas fa-flask"></i></div>
+          <div>
+            <h3 class="sip-title">AI Soil Improvement Insight</h3>
+            <p class="sip-sub" id="sipSubtitle">—</p>
+          </div>
+          <span class="sip-badge" id="sipBadge"><i class="fas fa-sparkles"></i> AI</span>
+        </div>
+        <!-- Loading bar -->
+        <div class="sip-loading-bar" id="sipLoadingBar" style="display:none;">
+          <div class="sip-loading-fill"></div>
+        </div>
+      </div>
+
+      <!-- 5 insight cards -->
+      <div class="sip-cards" id="sipCards">
+
+        <div class="sip-card sip-card--problem" id="sipCardProblem">
+          <div class="sip-card-header">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span>Problem Analysis</span>
+          </div>
+          <p class="sip-card-text" id="sipProblem">
+            <span class="sip-skeleton"></span>
+          </p>
+        </div>
+
+        <div class="sip-card sip-card--npk" id="sipCardNpk">
+          <div class="sip-card-header">
+            <i class="fas fa-flask"></i>
+            <span>NPK &amp; Nutrient Recommendations</span>
+          </div>
+          <p class="sip-card-text" id="sipNpk">
+            <span class="sip-skeleton"></span>
+          </p>
+        </div>
+
+        <div class="sip-card sip-card--water" id="sipCardWater">
+          <div class="sip-card-header">
+            <i class="fas fa-droplet"></i>
+            <span>Water &amp; Irrigation Management</span>
+          </div>
+          <p class="sip-card-text" id="sipWater">
+            <span class="sip-skeleton"></span>
+          </p>
+        </div>
+
+        <div class="sip-card sip-card--amend" id="sipCardAmend">
+          <div class="sip-card-header">
+            <i class="fas fa-seedling"></i>
+            <span>Soil Amendments &amp; Organic Matter</span>
+          </div>
+          <p class="sip-card-text" id="sipAmend">
+            <span class="sip-skeleton"></span>
+          </p>
+        </div>
+
+        <div class="sip-card sip-card--tech" id="sipCardTech">
+          <div class="sip-card-header">
+            <i class="fas fa-tractor"></i>
+            <span>Farming Techniques</span>
+          </div>
+          <p class="sip-card-text" id="sipTech">
+            <span class="sip-skeleton"></span>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LAND PLANNING & YIELD ESTIMATION
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="section section-dark" id="yield-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon"><i class="fas fa-tractor"></i></div>
+      <h2 class="section-title">Land Planning &amp; Yield Estimation</h2>
+      <p class="section-sub">Enter your crop and land size to get seed, water, fertilizer &amp; yield estimates</p>
+    </div>
+
+    <div class="yield-layout">
+
+      <!-- ── Input card ── -->
+      <div class="yield-form-card glass-card">
+        <h3 class="yield-form-title"><i class="fas fa-sliders"></i> Farm Parameters</h3>
+
+        <div class="yield-form-grid">
+          <!-- Crop -->
+          <div class="form-group yield-form-group-full">
+            <label class="form-label"><i class="fas fa-seedling"></i> Crop Name</label>
+            <input type="text" id="yield-crop" class="form-input"
+                   placeholder="e.g. Rice, Wheat, Cotton…" list="yieldCropList" autocomplete="off" />
+            <datalist id="yieldCropList">
+              <option value="Rice"/><option value="Maize"/><option value="Wheat"/>
+              <option value="Cotton"/><option value="Sugarcane"/><option value="Banana"/>
+              <option value="Tomato"/><option value="Potato"/><option value="Coffee"/>
+              <option value="Grapes"/><option value="Chickpea"/><option value="Lentil"/>
+              <option value="Jute"/><option value="Papaya"/><option value="Mango"/>
+              <option value="Watermelon"/><option value="Muskmelon"/><option value="Orange"/>
+            </datalist>
+          </div>
+
+          <!-- Area -->
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-ruler-combined"></i> Land Area</label>
+            <input type="number" id="yield-area" class="form-input"
+                   placeholder="e.g. 2.5" min="0.1" max="10000" step="0.1" value="1" />
+          </div>
+
+          <!-- Unit -->
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-scale-balanced"></i> Unit</label>
+            <div class="yield-unit-toggle">
+              <button class="yut-btn yut-btn--active" id="yutAcre"   data-unit="acre">Acre</button>
+              <button class="yut-btn"                 id="yutHectare" data-unit="hectare">Hectare</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick crop presets -->
+        <div class="yield-presets">
+          <span class="yield-preset-label">Quick select:</span>
+          <button class="yield-preset-btn" data-crop="Rice"      data-area="1">🌾 Rice 1ac</button>
+          <button class="yield-preset-btn" data-crop="Wheat"     data-area="2">🌿 Wheat 2ac</button>
+          <button class="yield-preset-btn" data-crop="Cotton"    data-area="1">🌸 Cotton 1ac</button>
+          <button class="yield-preset-btn" data-crop="Sugarcane" data-area="1">🎋 Sugarcane 1ac</button>
+          <button class="yield-preset-btn" data-crop="Maize"     data-area="1">🌽 Maize 1ac</button>
+        </div>
+
+        <button class="btn-yield" id="yieldBtn">
+          <i class="fas fa-calculator"></i>
+          <span>Calculate Estimates</span>
+          <div class="btn-loader" id="yieldLoader" style="display:none;"></div>
+        </button>
+      </div>
+
+      <!-- ── Results card ── -->
+      <div class="yield-results-card glass-card" id="yieldResultsCard" style="display:none;">
+        <div class="yield-results-header">
+          <div class="yield-results-crop" id="yieldResultCrop">—</div>
+          <div class="yield-results-area" id="yieldResultArea">—</div>
+        </div>
+
+        <!-- Stat tiles -->
+        <div class="yield-stats-grid" id="yieldStatsGrid">
+          <div class="yield-stat" id="ys-seed">
+            <div class="ys-icon" style="background:linear-gradient(135deg,#00e676,#00b248)">
+              <i class="fas fa-seedling"></i>
+            </div>
+            <div class="ys-info">
+              <div class="ys-label">Seed Required</div>
+              <div class="ys-value" id="ysv-seed">—</div>
+              <div class="ys-unit">kg</div>
+            </div>
+          </div>
+          <div class="yield-stat" id="ys-water">
+            <div class="ys-icon" style="background:linear-gradient(135deg,#40c4ff,#0091ea)">
+              <i class="fas fa-droplet"></i>
+            </div>
+            <div class="ys-info">
+              <div class="ys-label">Water Needed</div>
+              <div class="ys-value" id="ysv-water">—</div>
+              <div class="ys-unit">mm / season</div>
+            </div>
+          </div>
+          <div class="yield-stat" id="ys-yield">
+            <div class="ys-icon" style="background:linear-gradient(135deg,#ff9100,#ff6d00)">
+              <i class="fas fa-wheat-awn"></i>
+            </div>
+            <div class="ys-info">
+              <div class="ys-label">Expected Yield</div>
+              <div class="ys-value" id="ysv-yield">—</div>
+              <div class="ys-unit" id="ysv-yield-unit">tonnes</div>
+            </div>
+          </div>
+          <div class="yield-stat" id="ys-season">
+            <div class="ys-icon" style="background:linear-gradient(135deg,#e040fb,#aa00ff)">
+              <i class="fas fa-calendar-days"></i>
+            </div>
+            <div class="ys-info">
+              <div class="ys-label">Growing Season</div>
+              <div class="ys-value ys-value--sm" id="ysv-season">—</div>
+              <div class="ys-unit">duration</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NPK bar chart -->
+        <div class="yield-npk-section">
+          <div class="yield-npk-title"><i class="fas fa-flask"></i> Fertilizer Requirements (kg)</div>
+          <div class="yield-npk-bars" id="yieldNpkBars">
+            <div class="npk-bar-row">
+              <span class="npk-bar-label">N</span>
+              <div class="npk-bar-track"><div class="npk-bar-fill npk-n" id="npkFillN"></div></div>
+              <span class="npk-bar-val" id="npkValN">—</span>
+            </div>
+            <div class="npk-bar-row">
+              <span class="npk-bar-label">P</span>
+              <div class="npk-bar-track"><div class="npk-bar-fill npk-p" id="npkFillP"></div></div>
+              <span class="npk-bar-val" id="npkValP">—</span>
+            </div>
+            <div class="npk-bar-row">
+              <span class="npk-bar-label">K</span>
+              <div class="npk-bar-track"><div class="npk-bar-fill npk-k" id="npkFillK"></div></div>
+              <span class="npk-bar-val" id="npkValK">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AI Insight panel ── -->
+    <div class="yield-insight-panel glass-card" id="yieldInsightPanel" style="display:none;">
+      <div class="yield-insight-header">
+        <div class="yield-insight-icon"><i class="fas fa-lightbulb"></i></div>
+        <div>
+          <div class="yield-insight-title">AI Farming Recommendations</div>
+          <div class="yield-insight-sub" id="yieldInsightSub">—</div>
+        </div>
+        <span class="gemini-badge" id="yieldInsightBadge">
+          <i class="fas fa-sparkles"></i> AI Insights
+        </span>
+      </div>
+      <div class="yield-insight-loading" id="yieldInsightLoading" style="display:none;">
+        <div class="sip-loading-bar" style="display:block; margin:0;">
+          <div class="sip-loading-fill"></div>
+        </div>
+      </div>
+      <p class="yield-insight-text" id="yieldInsightText"></p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════════════════════ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">🌱 TerraAI</div>
+        <p>AI-powered smart agriculture platform for precision crop recommendations and soil analysis.</p>
+        <div class="footer-tech">
+          <span>Flask</span><span>Scikit-learn</span><span>CatBoost</span><span>OCR</span>
+        </div>
+      </div>
+      <div class="footer-links">
+        <h4>Features</h4>
+        <ul>
+          <li><a href="#predict-section">Crop Prediction</a></li>
+          <li><a href="#ocr-section">OCR Scanner</a></li>
+          <li><a href="#weather-section">Weather API</a></li>
+          <li><a href="#compat-section">Compatibility AI</a></li>
+          <li><a href="#yield-section">Yield Planner</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Project</h4>
+        <ul>
+          <li><a href="#">B.Tech CSE Capstone</a></li>
+          <li><a href="#">Final Year Project</a></li>
+          <li><a href="/dashboard">Dashboard</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 TerraAI — Final Year B.Tech CSE Project &nbsp;|&nbsp; Built with ❤️ using Flask + ML</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

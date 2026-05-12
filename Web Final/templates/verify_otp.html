@@ -1,0 +1,192 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraAI – Verify Email</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}" />
+</head>
+<body>
+
+<div class="auth-page auth-page-center">
+  <div class="auth-card otp-card">
+
+    <!-- Icon -->
+    <div class="otp-icon-wrap">
+      <div class="otp-icon">
+        <i class="fas fa-envelope-open-text"></i>
+      </div>
+      <div class="otp-icon-ring"></div>
+    </div>
+
+    <div class="auth-card-header">
+      <h1>Check Your Email</h1>
+      <p>We sent a 6-digit verification code to</p>
+      <div class="otp-email-badge">
+        <i class="fas fa-envelope"></i> {{ email }}
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="auth-alert auth-alert-error">
+      <i class="fas fa-circle-exclamation"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/verify-otp?email={{ email }}" class="auth-form" id="otpForm">
+      <input type="hidden" name="email" value="{{ email }}" />
+
+      <div class="otp-inputs-label">Enter verification code</div>
+      <div class="otp-inputs" id="otpInputs">
+        <input type="text" name="otp1" class="otp-box-input" maxlength="1" inputmode="numeric" pattern="[0-9]" required autocomplete="off" />
+        <input type="text" name="otp2" class="otp-box-input" maxlength="1" inputmode="numeric" pattern="[0-9]" required autocomplete="off" />
+        <input type="text" name="otp3" class="otp-box-input" maxlength="1" inputmode="numeric" pattern="[0-9]" required autocomplete="off" />
+        <div class="otp-dash">—</div>
+        <input type="text" name="otp4" class="otp-box-input" maxlength="1" inputmode="numeric" pattern="[0-9]" required autocomplete="off" />
+        <input type="text" name="otp5" class="otp-box-input" maxlength="1" inputmode="numeric" pattern="[0-9]" required autocomplete="off" />
+        <input type="text" name="otp6" class="otp-box-input" maxlength="1" inputmode="numeric" pattern="[0-9]" required autocomplete="off" />
+      </div>
+
+      <!-- Countdown timer -->
+      <div class="otp-timer" id="otpTimer">
+        <i class="fas fa-clock"></i> Code expires in <span id="countdown">10:00</span>
+      </div>
+
+      <button type="submit" class="auth-btn" id="verifyBtn">
+        <span>Verify & Create Account</span>
+        <i class="fas fa-check-circle"></i>
+      </button>
+    </form>
+
+    <div class="otp-resend">
+      Didn't receive the code?
+      <button class="resend-btn" id="resendBtn" onclick="resendOtp()">
+        <i class="fas fa-rotate-right"></i> Resend OTP
+      </button>
+    </div>
+
+    <div class="otp-resend-msg" id="resendMsg"></div>
+
+    <div class="auth-divider"><span>Wrong email?</span></div>
+    <a href="/signup" class="auth-btn-outline">
+      <i class="fas fa-arrow-left"></i> Back to Sign Up
+    </a>
+  </div>
+</div>
+
+<script>
+// ── OTP input auto-advance ────────────────────────────────────────────────────
+const boxes = document.querySelectorAll('.otp-box-input');
+boxes.forEach((box, i) => {
+  box.addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    if (this.value && i < boxes.length - 1) {
+      // skip the dash div
+      const next = boxes[i + 1];
+      if (next) next.focus();
+    }
+    checkAllFilled();
+  });
+  box.addEventListener('keydown', function(e) {
+    if (e.key === 'Backspace' && !this.value && i > 0) {
+      boxes[i - 1].focus();
+    }
+    if (e.key === 'ArrowLeft' && i > 0)  boxes[i - 1].focus();
+    if (e.key === 'ArrowRight' && i < boxes.length - 1) boxes[i + 1].focus();
+  });
+  box.addEventListener('paste', function(e) {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+    paste.split('').forEach((ch, j) => {
+      if (boxes[j]) boxes[j].value = ch;
+    });
+    const last = Math.min(paste.length, boxes.length) - 1;
+    if (boxes[last]) boxes[last].focus();
+    checkAllFilled();
+  });
+});
+
+function checkAllFilled() {
+  const filled = [...boxes].every(b => b.value.length === 1);
+  document.getElementById('verifyBtn').classList.toggle('ready', filled);
+}
+
+// Focus first box on load
+boxes[0]?.focus();
+
+// ── Countdown timer ───────────────────────────────────────────────────────────
+let seconds = 600;
+const countdownEl = document.getElementById('countdown');
+const timerEl     = document.getElementById('otpTimer');
+const resendBtn   = document.getElementById('resendBtn');
+
+resendBtn.disabled = true;
+resendBtn.style.opacity = '0.4';
+
+const timer = setInterval(() => {
+  seconds--;
+  if (seconds <= 0) {
+    clearInterval(timer);
+    countdownEl.textContent = '00:00';
+    timerEl.style.color = '#ff5252';
+    timerEl.innerHTML = '<i class="fas fa-clock"></i> Code has expired';
+    resendBtn.disabled = false;
+    resendBtn.style.opacity = '1';
+    return;
+  }
+  const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+  const s = String(seconds % 60).padStart(2, '0');
+  countdownEl.textContent = `${m}:${s}`;
+  if (seconds <= 60) timerEl.style.color = '#ff9100';
+  // Enable resend after 30s
+  if (seconds <= 570) {
+    resendBtn.disabled = false;
+    resendBtn.style.opacity = '1';
+  }
+}, 1000);
+
+// ── Resend OTP ────────────────────────────────────────────────────────────────
+async function resendOtp() {
+  const btn = document.getElementById('resendBtn');
+  const msg = document.getElementById('resendMsg');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+
+  const fd = new FormData();
+  fd.append('email', '{{ email }}');
+
+  try {
+    const res  = await fetch('/resend-otp', { method: 'POST', body: fd });
+    const data = await res.json();
+    msg.textContent = data.message;
+    msg.style.color = data.success ? '#00e676' : '#ff5252';
+    if (data.success) {
+      // Reset timer
+      seconds = 600;
+      timerEl.style.color = '';
+      timerEl.innerHTML = '<i class="fas fa-clock"></i> Code expires in <span id="countdown">10:00</span>';
+      // Clear boxes
+      boxes.forEach(b => { b.value = ''; });
+      boxes[0].focus();
+    }
+  } catch(e) {
+    msg.textContent = 'Failed to resend. Try again.';
+    msg.style.color = '#ff5252';
+  } finally {
+    btn.innerHTML = '<i class="fas fa-rotate-right"></i> Resend OTP';
+    setTimeout(() => { btn.disabled = false; }, 30000);
+  }
+}
+
+// ── Submit loader ─────────────────────────────────────────────────────────────
+document.getElementById('otpForm').addEventListener('submit', function() {
+  const btn = document.getElementById('verifyBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
+  btn.disabled = true;
+});
+</script>
+</body>
+</html>

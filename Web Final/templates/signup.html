@@ -1,0 +1,177 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraAI – Create Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}" />
+</head>
+<body>
+
+<div class="auth-page">
+  <!-- Left panel -->
+  <div class="auth-left">
+    <div class="auth-left-inner">
+      <div class="auth-brand">
+        <span class="auth-brand-icon">🌱</span>
+        <span class="auth-brand-name">TerraAI</span>
+      </div>
+      <h2 class="auth-left-title">Join TerraAI<br/>Today</h2>
+      <p class="auth-left-sub">Create your free account and start getting AI-powered crop recommendations in minutes.</p>
+      <div class="auth-steps">
+        <div class="auth-step active">
+          <div class="step-num">1</div>
+          <div class="step-info">
+            <div class="step-title">Fill Details</div>
+            <div class="step-sub">Name, email & password</div>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="auth-step">
+          <div class="step-num">2</div>
+          <div class="step-info">
+            <div class="step-title">Verify Email</div>
+            <div class="step-sub">Enter the OTP sent to you</div>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="auth-step">
+          <div class="step-num">3</div>
+          <div class="step-info">
+            <div class="step-title">Start Using</div>
+            <div class="step-sub">Access all AI features</div>
+          </div>
+        </div>
+      </div>
+      <div class="auth-left-orbs">
+        <div class="auth-orb auth-orb-1"></div>
+        <div class="auth-orb auth-orb-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h1>Create Account</h1>
+        <p>Sign up to get started with TerraAI</p>
+      </div>
+
+      {% if error %}
+      <div class="auth-alert auth-alert-error">
+        <i class="fas fa-circle-exclamation"></i> {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/signup" class="auth-form" id="signupForm">
+        <div class="auth-field">
+          <label><i class="fas fa-user"></i> Full Name</label>
+          <input type="text" name="name" placeholder="Your full name" required
+                 value="{{ name or '' }}" autocomplete="name" />
+        </div>
+
+        <div class="auth-field">
+          <label><i class="fas fa-envelope"></i> Email Address</label>
+          <input type="email" name="email" placeholder="you@example.com" required
+                 value="{{ email or '' }}" autocomplete="email" />
+        </div>
+
+        <div class="auth-field">
+          <label><i class="fas fa-lock"></i> Password</label>
+          <div class="auth-input-wrap">
+            <input type="password" name="password" id="signupPassword"
+                   placeholder="Min. 6 characters" required autocomplete="new-password"
+                   oninput="checkStrength(this.value)" />
+            <button type="button" class="toggle-pw" onclick="togglePw('signupPassword', this)">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+          <div class="pw-strength-bar"><div class="pw-strength-fill" id="pwFill"></div></div>
+          <div class="pw-strength-label" id="pwLabel"></div>
+        </div>
+
+        <div class="auth-field">
+          <label><i class="fas fa-lock-open"></i> Confirm Password</label>
+          <div class="auth-input-wrap">
+            <input type="password" name="confirm" id="confirmPassword"
+                   placeholder="Re-enter password" required autocomplete="new-password" />
+            <button type="button" class="toggle-pw" onclick="togglePw('confirmPassword', this)">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+          <div class="pw-match-msg" id="pwMatch"></div>
+        </div>
+
+        <button type="submit" class="auth-btn" id="signupBtn">
+          <span>Send Verification Code</span>
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </form>
+
+      <div class="auth-divider"><span>Already have an account?</span></div>
+      <a href="/login" class="auth-btn-outline">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  const icon = btn.querySelector('i');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+}
+
+function checkStrength(val) {
+  const fill  = document.getElementById('pwFill');
+  const label = document.getElementById('pwLabel');
+  let score = 0;
+  if (val.length >= 6)  score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const levels = [
+    { pct: '20%', color: '#ff5252', text: 'Very Weak' },
+    { pct: '40%', color: '#ff9100', text: 'Weak' },
+    { pct: '60%', color: '#ffeb3b', text: 'Fair' },
+    { pct: '80%', color: '#69f0ae', text: 'Strong' },
+    { pct: '100%', color: '#00e676', text: 'Very Strong' },
+  ];
+  const lvl = levels[Math.max(0, score - 1)] || levels[0];
+  fill.style.width = val.length ? lvl.pct : '0%';
+  fill.style.background = lvl.color;
+  label.textContent = val.length ? lvl.text : '';
+  label.style.color = lvl.color;
+}
+
+document.getElementById('confirmPassword').addEventListener('input', function() {
+  const pw  = document.getElementById('signupPassword').value;
+  const msg = document.getElementById('pwMatch');
+  if (!this.value) { msg.textContent = ''; return; }
+  if (this.value === pw) {
+    msg.textContent = '✓ Passwords match';
+    msg.style.color = '#00e676';
+  } else {
+    msg.textContent = '✗ Passwords do not match';
+    msg.style.color = '#ff5252';
+  }
+});
+
+document.getElementById('signupForm').addEventListener('submit', function(e) {
+  const pw  = document.getElementById('signupPassword').value;
+  const cpw = document.getElementById('confirmPassword').value;
+  if (pw !== cpw) { e.preventDefault(); return; }
+  const btn = document.getElementById('signupBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending OTP…';
+  btn.disabled = true;
+});
+</script>
+</body>
+</html>

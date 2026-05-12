@@ -1,0 +1,296 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraAI Dashboard 🌱</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <div class="nav-container">
+    <div class="nav-brand">
+      <span class="brand-icon">🌱</span>
+      <span class="brand-name">TerraAI</span>
+      <span class="brand-badge">Dashboard</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/#predict-section">Predict</a></li>
+      <li><a href="/#compat-section">Compatibility</a></li>
+      {% if user %}
+      <li class="nav-user">
+        <span class="nav-user-name"><i class="fas fa-user-circle"></i> {{ user.name.split()[0] }}</span>
+        <a href="/logout" class="nav-logout" title="Logout"><i class="fas fa-right-from-bracket"></i></a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+
+  <!-- Sidebar -->
+  <aside class="dash-sidebar">
+    <div class="dash-sidebar-inner">
+      <div class="dash-nav-label">Overview</div>
+      <a href="#" class="dash-nav-item active" data-tab="overview">
+        <i class="fas fa-chart-pie"></i> Overview
+      </a>
+      <a href="#" class="dash-nav-item" data-tab="crops">
+        <i class="fas fa-seedling"></i> Crop Profiles
+      </a>
+      <a href="#" class="dash-nav-item" data-tab="soil">
+        <i class="fas fa-layer-group"></i> Soil Guide
+      </a>
+      <a href="#" class="dash-nav-item" data-tab="model">
+        <i class="fas fa-brain"></i> Model Info
+      </a>
+      <div class="dash-nav-label" style="margin-top:1.5rem;">Tools</div>
+      <a href="/#predict-section" class="dash-nav-item">
+        <i class="fas fa-magic"></i> Quick Predict
+      </a>
+      <a href="/#ocr-section" class="dash-nav-item">
+        <i class="fas fa-file-image"></i> OCR Scanner
+      </a>
+      <a href="/#compat-section" class="dash-nav-item">
+        <i class="fas fa-arrows-rotate"></i> Compatibility
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="dash-main">
+
+    <!-- ── Overview Tab ── -->
+    <div class="dash-tab active" id="tab-overview">
+      <div class="dash-page-header">
+        <h1>Dashboard Overview</h1>
+        <p>TerraAI platform statistics and quick insights</p>
+      </div>
+
+      <div class="dash-kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:linear-gradient(135deg,#00e676,#00b248)">
+            <i class="fas fa-seedling"></i>
+          </div>
+          <div class="kpi-info">
+            <div class="kpi-num">22</div>
+            <div class="kpi-label">Supported Crops</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:linear-gradient(135deg,#40c4ff,#0091ea)">
+            <i class="fas fa-brain"></i>
+          </div>
+          <div class="kpi-info">
+            <div class="kpi-num">3</div>
+            <div class="kpi-label">ML Models</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:linear-gradient(135deg,#ff6d00,#ff9100)">
+            <i class="fas fa-percent"></i>
+          </div>
+          <div class="kpi-info">
+            <div class="kpi-num">98%</div>
+            <div class="kpi-label">Model Accuracy</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:linear-gradient(135deg,#e040fb,#aa00ff)">
+            <i class="fas fa-database"></i>
+          </div>
+          <div class="kpi-info">
+            <div class="kpi-num">2640</div>
+            <div class="kpi-label">Training Samples</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-charts-grid dash-charts-single">
+        <div class="dash-chart-card glass-card">
+          <h3><i class="fas fa-chart-radar"></i> Soil Parameter Ranges</h3>
+          <div class="chart-fixed-wrap">
+            <canvas id="soilRadarChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-chart-card glass-card" style="margin-top:1.5rem;">
+        <h3><i class="fas fa-chart-line"></i> Model Confidence by Crop</h3>
+        <div class="chart-fixed-wrap chart-fixed-wrap--line">
+          <canvas id="confChart"></canvas>
+        </div>
+      </div>
+
+      <!-- ── Dynamic Crop Insight Panel ── -->
+      <div class="dash-insight-panel glass-card" id="insightPanel" style="margin-top:1.5rem; display:none;">
+        <div class="insight-panel-header">
+          <div class="insight-panel-title">
+            <i class="fas fa-seedling"></i>
+            <span id="insightCropName">—</span>
+            <span class="insight-rank-badge" id="insightRankBadge">#1</span>
+          </div>
+          <div class="insight-conf-pill" id="insightConfPill">—%</div>
+        </div>
+
+        <!-- Recommendation badge + soil health -->
+        <div class="insight-badges" id="insightBadges"></div>
+
+        <!-- Parameter status bars -->
+        <div class="insight-params" id="insightParams"></div>
+
+        <!-- AI explanation -->
+        <div class="insight-ai-block" id="insightAiBlock">
+          <div class="insight-ai-header">
+            <span class="gemini-badge" id="insightAiBadge"><i class="fas fa-sparkles"></i> AI Insights</span>
+            <span class="insight-ai-title">Why this crop?</span>
+          </div>
+          <div class="insight-ai-text" id="insightAiText">
+            <span class="insight-loading"><i class="fas fa-spinner fa-spin"></i> Generating AI insights…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Crop Ranking Cards ── -->
+      <div class="dash-ranking-section" id="rankingSection" style="margin-top:1.5rem; display:none;">
+        <div class="dash-ranking-header">
+          <h3><i class="fas fa-trophy"></i> Crop Rankings — Click to Explore</h3>
+          <span class="dash-ranking-sub">Select any crop to see detailed AI insights</span>
+        </div>
+        <div class="dash-ranking-grid" id="rankingGrid"></div>
+      </div>
+    </div>
+
+    <!-- ── Crops Tab ── -->
+    <div class="dash-tab" id="tab-crops">
+      <div class="dash-page-header">
+        <h1>Crop Profiles</h1>
+        <p>Ideal soil and climate conditions for each supported crop</p>
+      </div>
+      <div class="crop-profiles-grid" id="cropProfilesGrid"></div>
+    </div>
+
+    <!-- ── Soil Tab ── -->
+    <div class="dash-tab" id="tab-soil">
+      <div class="dash-page-header">
+        <h1>Soil Type Guide</h1>
+        <p>Understanding soil types and their agricultural properties</p>
+      </div>
+      <div class="soil-guide-grid">
+        <div class="soil-card glass-card">
+          <div class="soil-icon" style="background:#8B4513;">🟫</div>
+          <h3>Loamy Soil</h3>
+          <p>Best all-purpose agricultural soil. Balanced mix of sand, silt, and clay. Excellent water retention and drainage.</p>
+          <div class="soil-crops"><strong>Best for:</strong> Wheat, Maize, Vegetables, Fruits</div>
+          <div class="soil-ph">pH: 6.0 – 7.0</div>
+        </div>
+        <div class="soil-card glass-card">
+          <div class="soil-icon">🔵</div>
+          <h3>Clay Soil</h3>
+          <p>Heavy, dense soil with excellent nutrient retention. Prone to waterlogging. Needs good drainage management.</p>
+          <div class="soil-crops"><strong>Best for:</strong> Rice, Cotton, Sugarcane</div>
+          <div class="soil-ph">pH: 5.5 – 7.0</div>
+        </div>
+        <div class="soil-card glass-card">
+          <div class="soil-icon">🟡</div>
+          <h3>Sandy Soil</h3>
+          <p>Light, well-draining soil. Low nutrient retention. Requires frequent irrigation and fertilization.</p>
+          <div class="soil-crops"><strong>Best for:</strong> Groundnut, Potato, Carrot</div>
+          <div class="soil-ph">pH: 5.5 – 7.5</div>
+        </div>
+        <div class="soil-card glass-card">
+          <div class="soil-icon">⚫</div>
+          <h3>Black Soil</h3>
+          <p>Rich in calcium, magnesium, and iron. Excellent moisture retention. Ideal for dry-land farming.</p>
+          <div class="soil-crops"><strong>Best for:</strong> Cotton, Soybean, Sorghum</div>
+          <div class="soil-ph">pH: 7.5 – 8.5</div>
+        </div>
+        <div class="soil-card glass-card">
+          <div class="soil-icon">🔴</div>
+          <h3>Red Soil</h3>
+          <p>Rich in iron oxides. Well-drained but low in nitrogen and phosphorus. Needs fertilizer supplementation.</p>
+          <div class="soil-crops"><strong>Best for:</strong> Coffee, Tea, Groundnut</div>
+          <div class="soil-ph">pH: 5.5 – 7.0</div>
+        </div>
+        <div class="soil-card glass-card">
+          <div class="soil-icon">🟤</div>
+          <h3>Alluvial Soil</h3>
+          <p>Deposited by rivers. Very fertile with good texture. Most productive agricultural soil in India.</p>
+          <div class="soil-crops"><strong>Best for:</strong> Rice, Wheat, Sugarcane, Pulses</div>
+          <div class="soil-ph">pH: 6.5 – 8.0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Model Tab ── -->
+    <div class="dash-tab" id="tab-model">
+      <div class="dash-page-header">
+        <h1>ML Model Information</h1>
+        <p>Technical details about the TerraAI ensemble model</p>
+      </div>
+      <div class="model-info-grid">
+        <div class="model-card glass-card">
+          <div class="model-card-icon"><i class="fas fa-tree"></i></div>
+          <h3>Random Forest</h3>
+          <div class="model-params">
+            <div class="mp-row"><span>Estimators</span><span>300</span></div>
+            <div class="mp-row"><span>Max Depth</span><span>None (full)</span></div>
+            <div class="mp-row"><span>Min Samples Split</span><span>2</span></div>
+            <div class="mp-row"><span>Voting Weight</span><span>1</span></div>
+          </div>
+          <p class="model-desc">Ensemble of decision trees using bagging. Robust against overfitting and handles non-linear relationships well.</p>
+        </div>
+        <div class="model-card glass-card">
+          <div class="model-card-icon"><i class="fas fa-cat"></i></div>
+          <h3>CatBoost</h3>
+          <div class="model-params">
+            <div class="mp-row"><span>Iterations</span><span>300</span></div>
+            <div class="mp-row"><span>Learning Rate</span><span>0.05</span></div>
+            <div class="mp-row"><span>Depth</span><span>6</span></div>
+            <div class="mp-row"><span>Voting Weight</span><span>1</span></div>
+          </div>
+          <p class="model-desc">Gradient boosting algorithm optimized for categorical features. Excellent accuracy with minimal hyperparameter tuning.</p>
+        </div>
+        <div class="model-card glass-card">
+          <div class="model-card-icon"><i class="fas fa-vote-yea"></i></div>
+          <h3>Voting Ensemble</h3>
+          <div class="model-params">
+            <div class="mp-row"><span>Strategy</span><span>Soft Voting</span></div>
+            <div class="mp-row"><span>Models</span><span>RF + CatBoost</span></div>
+            <div class="mp-row"><span>Output</span><span>Top 5 crops</span></div>
+            <div class="mp-row"><span>Accuracy</span><span>~98%</span></div>
+          </div>
+          <p class="model-desc">Combines probability outputs from both models. Soft voting averages class probabilities for more nuanced predictions.</p>
+        </div>
+      </div>
+
+      <div class="model-features glass-card" style="margin-top:1.5rem;">
+        <h3><i class="fas fa-table"></i> Input Features</h3>
+        <div class="features-table">
+          <div class="ft-header">
+            <span>Feature</span><span>Unit</span><span>Range</span><span>Description</span>
+          </div>
+          <div class="ft-row"><span>N (Nitrogen)</span><span>kg/ha</span><span>0 – 140</span><span>Soil nitrogen content</span></div>
+          <div class="ft-row"><span>P (Phosphorus)</span><span>kg/ha</span><span>5 – 145</span><span>Soil phosphorus content</span></div>
+          <div class="ft-row"><span>K (Potassium)</span><span>kg/ha</span><span>5 – 205</span><span>Soil potassium content</span></div>
+          <div class="ft-row"><span>Temperature</span><span>°C</span><span>8 – 44</span><span>Average ambient temperature</span></div>
+          <div class="ft-row"><span>Humidity</span><span>%</span><span>14 – 100</span><span>Relative humidity</span></div>
+          <div class="ft-row"><span>pH</span><span>—</span><span>3.5 – 9.5</span><span>Soil acidity/alkalinity</span></div>
+          <div class="ft-row"><span>Rainfall</span><span>mm</span><span>20 – 300</span><span>Annual rainfall</span></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
