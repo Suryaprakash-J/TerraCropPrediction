@@ -12,12 +12,17 @@ import requests
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
 from functools import wraps
+from dotenv import load_dotenv
+
+# Load .env file (no-op if running on Render/Heroku where vars are set natively)
+load_dotenv()
 
 # ── Gemini API ────────────────────────────────────────────────────────────────
-GEMINI_API_KEY = "AIzaSyD0XLS7yYgIaaVI-V-YRuqtx0XNtb_doNY"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
 GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash-lite:generateContent?key=" + GEMINI_API_KEY
+    f"https://generativelanguage.googleapis.com/v1beta/models/"
+    f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
 )
 
 def get_gemini_explanation(crop: str, confidence: float, N, P, K, temp, humidity, ph, rainfall) -> tuple[str, bool]:
@@ -120,7 +125,11 @@ except ImportError:
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024   # 16 MB
-app.secret_key = os.environ.get("SECRET_KEY", "TerraAI-secret-key-2025-xK9mP3")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "")
+if not app.secret_key:
+    import secrets as _secrets
+    app.secret_key = _secrets.token_hex(32)
+    print("[WARN] FLASK_SECRET_KEY not set — using a random key (sessions will reset on restart)")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp"}
 
 os.makedirs("uploads", exist_ok=True)
@@ -161,7 +170,7 @@ def load_model():
 load_model()
 
 # ── Weather API ───────────────────────────────────────────────────────────────
-WEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "9f0265fb9cdccedb133031348db7209a")
+WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
 
 # ── Crop emoji map ────────────────────────────────────────────────────────────
 CROP_EMOJI = {
@@ -544,7 +553,7 @@ def weather():
     lat  = request.args.get("lat", "")
     lon  = request.args.get("lon", "")
 
-    if WEATHER_API_KEY == "YOUR_API_KEY_HERE":
+    if not WEATHER_API_KEY:
         # Return mock data so the UI still works without a real key
         return jsonify({
             "city": city or "Demo City",

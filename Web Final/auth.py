@@ -12,12 +12,16 @@ import hashlib
 import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from dotenv import load_dotenv
 
-# ── Config ────────────────────────────────────────────────────────────────────
-SMTP_EMAIL    = "prakashsurya8287@gmail.com"
-SMTP_PASSWORD = "ohnv kcep wahs inrc"          # Gmail App Password
-SMTP_HOST     = "smtp.gmail.com"
-SMTP_PORT     = 587
+# Load .env (safe no-op on Render/Heroku where vars are injected natively)
+load_dotenv()
+
+# ── Config — all values from environment variables ────────────────────────────
+SMTP_EMAIL    = os.getenv("SMTP_EMAIL",    "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_HOST     = os.getenv("SMTP_HOST",     "smtp.gmail.com")
+SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
 
 USERS_FILE    = "users.json"
 OTP_EXPIRY    = 600   # 10 minutes in seconds
@@ -116,6 +120,8 @@ def get_user(email: str) -> dict | None:
 # ── Email sender ──────────────────────────────────────────────────────────────
 def send_otp_email(to_email: str, otp: str, name: str) -> tuple[bool, str]:
     """Send OTP verification email. Returns (success, message)."""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False, "SMTP credentials not configured. Set SMTP_EMAIL and SMTP_PASSWORD in .env"
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = "🌱 TerraAI – Your Verification Code"
