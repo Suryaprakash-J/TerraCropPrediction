@@ -3,10 +3,11 @@
     name: terraai
     env: python
     runtime: python-3.11.9
+    rootDir: Web Final
     buildCommand: pip install -r requirements.txt && python train_model.py
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
-      - key: FLASK_SECRET_KEY
+      - key: FLASK_SECRET_KEYS
         generateValue: true          # Render auto-generates a secure random value
       - key: FLASK_DEBUG
         value: "false"
