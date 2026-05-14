@@ -2,6 +2,7 @@
   - type: web
     name: terraai
     env: python
+    runtime: python-3.11.9
     buildCommand: pip install -r requirements.txt && python train_model.py
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
