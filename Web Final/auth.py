@@ -1,30 +1,32 @@
 ﻿"""
 TerraAI – Authentication Module
 Handles: user storage, OTP generation, email sending, session management
+
+Email delivery: Resend API (HTTPS) — works on Railway, Render, Heroku.
+No SMTP / smtplib used. Requires RESEND_API_KEY env var.
 """
 
 import os
 import json
 import random
 import string
-import smtplib
 import hashlib
 import time
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import requests as _http          # plain HTTPS — no smtplib needed
 from dotenv import load_dotenv
 
-# Load .env (safe no-op on Render/Heroku where vars are injected natively)
+# Load .env (safe no-op on Railway/Render where vars are injected natively)
 load_dotenv()
 
-# ── Config — all values from environment variables ────────────────────────────
-SMTP_EMAIL    = os.getenv("SMTP_EMAIL",    "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_HOST     = os.getenv("SMTP_HOST",     "smtp.gmail.com")
-SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
+# ── Resend config ─────────────────────────────────────────────────────────────
+RESEND_API_KEY   = os.getenv("RESEND_API_KEY", "")
+# "From" address — must be a verified domain/email in your Resend account.
+# Use the Resend sandbox address for testing: onboarding@resend.dev
+RESEND_FROM      = os.getenv("RESEND_FROM_EMAIL", "TerraAI <onboarding@resend.dev>")
+RESEND_SEND_URL  = "https://api.resend.com/emails"
 
-USERS_FILE    = "users.json"
-OTP_EXPIRY    = 600   # 10 minutes in seconds
+USERS_FILE  = "users.json"
+OTP_EXPIRY  = 600   # 10 minutes in seconds
 
 # ── User store (JSON file) ────────────────────────────────────────────────────
 def _load_users() -> dict:
@@ -63,7 +65,7 @@ def verify_otp(email: str, otp: str) -> tuple[bool, str]:
     Returns (success, message).
     On success, creates the user account and removes OTP entry.
     """
-    key = email.lower()
+    key   = email.lower()
     entry = _otp_store.get(key)
 
     if not entry:
@@ -91,11 +93,11 @@ def verify_otp(email: str, otp: str) -> tuple[bool, str]:
 
 def resend_otp(email: str) -> tuple[bool, str]:
     """Generate a fresh OTP for an existing pending signup."""
-    key = email.lower()
+    key   = email.lower()
     entry = _otp_store.get(key)
     if not entry:
         return False, "No pending signup found. Please sign up again."
-    new_otp = generate_otp()
+    new_otp          = generate_otp()
     entry["otp"]     = new_otp
     entry["expires"] = time.time() + OTP_EXPIRY
     ok, msg = send_otp_email(email, new_otp, entry["data"]["name"])
@@ -117,19 +119,18 @@ def authenticate(email: str, password: str) -> tuple[bool, dict | None]:
 def get_user(email: str) -> dict | None:
     return _load_users().get(email.lower())
 
-# ── Email sender ──────────────────────────────────────────────────────────────
+# ── Email sender — Resend API (HTTPS, no SMTP) ────────────────────────────────
 def send_otp_email(to_email: str, otp: str, name: str) -> tuple[bool, str]:
-    """Send OTP verification email. Returns (success, message)."""
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
-        return False, "SMTP credentials not configured. Set SMTP_EMAIL and SMTP_PASSWORD in Railway environment variables."
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "🌱 TerraAI – Your Verification Code"
-        msg["From"]    = f"TerraAI <{SMTP_EMAIL}>"
-        msg["To"]      = to_email
+    """
+    Send OTP verification email via Resend API.
+    Uses HTTPS POST — works on Railway, Render, Heroku (no SMTP port issues).
+    Returns (success: bool, message: str).
+    """
+    if not RESEND_API_KEY:
+        print("[ERROR] RESEND_API_KEY is not set in environment variables.")
+        return False, "Email service not configured. Set RESEND_API_KEY in Railway variables."
 
-        html = f"""
-<!DOCTYPE html>
+    html_body = f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8"/>
@@ -181,32 +182,50 @@ def send_otp_email(to_email: str, otp: str, name: str) -> tuple[bool, str]:
     </div>
   </div>
 </body>
-</html>
-"""
-        text_part = MIMEText(
-            f"Hi {name},\n\nYour TerraAI verification code is: {otp}\n\nExpires in 10 minutes.",
-            "plain"
+</html>"""
+
+    text_body = (
+        f"Hi {name},\n\n"
+        f"Your TerraAI verification code is: {otp}\n\n"
+        f"Expires in 10 minutes.\n\n"
+        f"If you didn't request this, ignore this email."
+    )
+
+    payload = {
+        "from":    RESEND_FROM,
+        "to":      [to_email],
+        "subject": "🌱 TerraAI – Your Verification Code",
+        "html":    html_body,
+        "text":    text_body,
+    }
+
+    try:
+        resp = _http.post(
+            RESEND_SEND_URL,
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type":  "application/json",
+            },
+            timeout=15,
         )
-        html_part = MIMEText(html, "html")
-        msg.attach(text_part)
-        msg.attach(html_part)
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        if resp.status_code in (200, 201):
+            data = resp.json()
+            print(f"[INFO] OTP email sent via Resend to {to_email} | id={data.get('id')}")
+            return True, "OTP sent successfully."
 
-        print(f"[INFO] OTP email sent to {to_email}")
-        return True, "OTP sent successfully."
+        # Non-2xx — surface the Resend error message
+        try:
+            err = resp.json().get("message", resp.text)
+        except Exception:
+            err = resp.text
+        print(f"[ERROR] Resend API error {resp.status_code}: {err}")
+        return False, f"Email delivery failed ({resp.status_code}): {err}"
 
-    except smtplib.SMTPAuthenticationError:
-        print(f"[ERROR] SMTP auth failed for {SMTP_EMAIL}")
-        return False, "Email authentication failed. Check SMTP credentials."
-    except smtplib.SMTPException as e:
-        print(f"[ERROR] SMTP error: {e}")
-        return False, f"Email send failed: {e}"
-    except Exception as e:
-        print(f"[ERROR] Unexpected email error: {e}")
-        return False, f"Unexpected error: {e}"
+    except _http.exceptions.Timeout:
+        print("[ERROR] Resend API request timed out.")
+        return False, "Email service timed out. Please try again."
+    except _http.exceptions.RequestException as e:
+        print(f"[ERROR] Resend HTTP error: {e}")
+        return False, f"Email service error: {e}"

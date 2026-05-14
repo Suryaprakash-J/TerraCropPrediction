@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: terraai
+    env: python
+    buildCommand: pip install -r requirements.txt && python train_model.py
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: "gemini-2.0-flash-lite"
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: "TerraAI <onboarding@resend.dev>"

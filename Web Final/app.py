@@ -372,13 +372,11 @@ def logout():
 def debug_env():
     """Temporary route — shows which env vars are set (NOT their values)."""
     checks = {
-        "FLASK_SECRET_KEY":   bool(os.getenv("FLASK_SECRET_KEY")),
-        "GEMINI_API_KEY":     bool(os.getenv("GEMINI_API_KEY")),
-        "OPENWEATHER_API_KEY":bool(os.getenv("OPENWEATHER_API_KEY")),
-        "SMTP_EMAIL":         bool(os.getenv("SMTP_EMAIL")),
-        "SMTP_PASSWORD":      bool(os.getenv("SMTP_PASSWORD")),
-        "SMTP_HOST":          os.getenv("SMTP_HOST", "NOT SET"),
-        "SMTP_PORT":          os.getenv("SMTP_PORT", "NOT SET"),
+        "FLASK_SECRET_KEY":    bool(os.getenv("FLASK_SECRET_KEY")),
+        "GEMINI_API_KEY":      bool(os.getenv("GEMINI_API_KEY")),
+        "OPENWEATHER_API_KEY": bool(os.getenv("OPENWEATHER_API_KEY")),
+        "RESEND_API_KEY":      bool(os.getenv("RESEND_API_KEY")),
+        "RESEND_FROM_EMAIL":   os.getenv("RESEND_FROM_EMAIL", "NOT SET"),
     }
     lines = [f"{'✅' if v is True else ('❌ NOT SET' if v is False else v)}  {k}"
              for k, v in checks.items()]
