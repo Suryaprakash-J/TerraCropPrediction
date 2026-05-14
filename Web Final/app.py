@@ -170,7 +170,7 @@ def load_model():
 load_model()
 
 # ── Weather API ───────────────────────────────────────────────────────────────
-WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", ""), "9f0265fb9cdccedb133031348db7209a")
 
 # ── Crop emoji map ────────────────────────────────────────────────────────────
 CROP_EMOJI = {
@@ -367,6 +367,24 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+# ── Debug env check (remove after confirming Railway vars are set) ────────────
+@app.route("/debug-env")
+def debug_env():
+    """Temporary route — shows which env vars are set (NOT their values)."""
+    checks = {
+        "FLASK_SECRET_KEY":   bool(os.getenv("FLASK_SECRET_KEY")),
+        "GEMINI_API_KEY":     bool(os.getenv("GEMINI_API_KEY")),
+        "OPENWEATHER_API_KEY":bool(os.getenv("OPENWEATHER_API_KEY")),
+        "SMTP_EMAIL":         bool(os.getenv("SMTP_EMAIL")),
+        "SMTP_PASSWORD":      bool(os.getenv("SMTP_PASSWORD")),
+        "SMTP_HOST":          os.getenv("SMTP_HOST", "NOT SET"),
+        "SMTP_PORT":          os.getenv("SMTP_PORT", "NOT SET"),
+    }
+    lines = [f"{'✅' if v is True else ('❌ NOT SET' if v is False else v)}  {k}"
+             for k, v in checks.items()]
+    return "<pre style='font-family:monospace;font-size:16px;padding:2rem'>" + \
+           "TerraAI — Environment Variable Check\n\n" + "\n".join(lines) + "</pre>"
+
 # ── Predict crop ──────────────────────────────────────────────────────────────
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -553,7 +571,7 @@ def weather():
     lat  = request.args.get("lat", "")
     lon  = request.args.get("lon", "")
 
-    if not WEATHER_API_KEY:
+    if WEATHER_API_KEY == "YOUR_API_KEY_HERE":
         # Return mock data so the UI still works without a real key
         return jsonify({
             "city": city or "Demo City",

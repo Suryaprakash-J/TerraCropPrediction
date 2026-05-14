@@ -1,30 +1,28 @@
 ﻿"""
 TerraAI – Authentication Module
 Handles: user storage, OTP generation, email sending, session management
+Email delivery: Resend API (HTTPS — Railway-compatible, no SMTP blocking)
 """
 
 import os
 import json
 import random
 import string
-import smtplib
 import hashlib
 import time
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import resend
 from dotenv import load_dotenv
 
-# Load .env (safe no-op on Render/Heroku where vars are injected natively)
+# Load .env locally (no-op on Railway where vars are injected natively)
 load_dotenv()
 
-# ── Config — all values from environment variables ────────────────────────────
-SMTP_EMAIL    = os.getenv("SMTP_EMAIL",    "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_HOST     = os.getenv("SMTP_HOST",     "smtp.gmail.com")
-SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
+# ── Resend API config ─────────────────────────────────────────────────────────
+resend.api_key = os.getenv("RESEND_API_KEY", "")
 
-USERS_FILE    = "users.json"
-OTP_EXPIRY    = 600   # 10 minutes in seconds
+# ── App config ────────────────────────────────────────────────────────────────
+SMTP_EMAIL = os.getenv("SMTP_EMAIL", "onboarding@resend.dev")   # kept for FROM address
+USERS_FILE = "users.json"
+OTP_EXPIRY = 600   # 10 minutes in seconds
 
 # ── User store (JSON file) ────────────────────────────────────────────────────
 def _load_users() -> dict:
@@ -117,18 +115,18 @@ def authenticate(email: str, password: str) -> tuple[bool, dict | None]:
 def get_user(email: str) -> dict | None:
     return _load_users().get(email.lower())
 
-# ── Email sender ──────────────────────────────────────────────────────────────
-def send_otp_email(to_email: str, otp: str, name: str) -> tuple[bool, str]:
-    """Send OTP verification email. Returns (success, message)."""
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
-        return False, "SMTP credentials not configured. Set SMTP_EMAIL and SMTP_PASSWORD in .env"
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "🌱 TerraAI – Your Verification Code"
-        msg["From"]    = f"TerraAI <{SMTP_EMAIL}>"
-        msg["To"]      = to_email
+# ── Email sender — Resend API (HTTPS, Railway-compatible) ────────────────────
+def send_otp_email(to_email: str, otp: str, name: str = "User") -> tuple[bool, str]:
+    """
+    Send OTP verification email via Resend API.
+    Uses HTTPS — no SMTP port blocking on Railway.
+    Returns (success: bool, message: str).
+    """
+    if not resend.api_key:
+        print("[ERROR] RESEND_API_KEY is not set in environment variables.")
+        return False, "Email service not configured. Set RESEND_API_KEY in Railway variables."
 
-        html = f"""
+    html_body = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -183,25 +181,17 @@ def send_otp_email(to_email: str, otp: str, name: str) -> tuple[bool, str]:
 </body>
 </html>
 """
-        text_part = MIMEText(
-            f"Hi {name},\n\nYour TerraAI verification code is: {otp}\n\nExpires in 10 minutes.",
-            "plain"
-        )
-        html_part = MIMEText(html, "html")
-        msg.attach(text_part)
-        msg.attach(html_part)
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
-
+    try:
+        response = resend.Emails.send({
+            "from":    "TerraAI <onboarding@resend.dev>",
+            "to":      to_email,
+            "subject": "🌱 TerraAI – Your Verification Code",
+            "html":    html_body,
+        })
+        print(f"[INFO] OTP email sent to {to_email} | Resend response: {response}")
         return True, "OTP sent successfully."
 
-    except smtplib.SMTPAuthenticationError:
-        return False, "Email authentication failed. Check SMTP credentials."
-    except smtplib.SMTPException as e:
-        return False, f"Email send failed: {e}"
     except Exception as e:
-        return False, f"Unexpected error: {e}"
+        print(f"[ERROR] Resend email failed for {to_email}: {e}")
+        return False, f"Email delivery failed: {e}"
