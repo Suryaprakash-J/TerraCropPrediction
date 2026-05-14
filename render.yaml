@@ -1,0 +1,27 @@
+﻿services:
+  - type: web
+    name: terraai
+    env: python
+    runtime: python-3.11.9
+    rootDir: Web Final
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: FLASK_SECRET_KEYS
+        generateValue: true          # Render auto-generates a secure random value
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: GEMINI_API_KEY
+        sync: false                  # Set manually in Render dashboard
+      - key: GEMINI_MODEL
+        value: "gemini-2.0-flash-lite"
+      - key: OPENWEATHER_API_KEY
+        sync: false                  # Set manually in Render dashboard
+      - key: SMTP_EMAIL
+        sync: false                  # Set manually in Render dashboard
+      - key: SMTP_PASSWORD
+        sync: false                  # Set manually in Render dashboard
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
