@@ -170,7 +170,7 @@ def load_model():
 load_model()
 
 # ── Weather API ───────────────────────────────────────────────────────────────
-WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", ""), "9f0265fb9cdccedb133031348db7209a")
+WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "9f0265fb9cdccedb133031348db7209a")
 
 # ── Crop emoji map ────────────────────────────────────────────────────────────
 CROP_EMOJI = {
